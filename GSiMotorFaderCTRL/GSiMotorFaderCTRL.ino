@@ -7,15 +7,15 @@
 // Libraries
 #include <EEPROM.h>
 #include <MIDIUSB.h>
-//#include <MIDI.h>
-//MIDI_CREATE_DEFAULT_INSTANCE();
+#include <MIDI.h>
+MIDI_CREATE_DEFAULT_INSTANCE();
 
 // Some definitions
 #define PIN_Fader     A0
 #define PIN_Motor_A   5
 #define PIN_Motor_B   6
 #define DEADBAND      8
-#define FADER_TIMEOUT_MS  500
+#define FADER_TIMEOUT_MS  200
 
 // Global variables
 int prev_adc = -1;
@@ -31,7 +31,7 @@ void SendMidiCC(int channel, int num, int value)
   MidiUSB.flush();
 
   // Midi lib wants channels 1~16
-  //MIDI.sendControlChange(num, value, channel+1);
+  MIDI.sendControlChange(num, value, channel+1);
 }
 
 // Called to read the fader value
@@ -54,7 +54,7 @@ void ReadFader()
   // Send Midi
   if (faderCanSend)
   {
-    Serial.print("MIDI Send value: "); Serial.println(fader_value);
+    //Serial.print("MIDI Send value: "); Serial.println(fader_value);
     SendMidiCC(0, 7, fader_value);
   }
 }
@@ -94,14 +94,14 @@ void MoveFader(int dest) // dest is 10 bit value
 
 void setup()
 {
+  // Setup MIDI
+  MIDI.begin(MIDI_CHANNEL_OMNI);
+  MIDI.turnThruOff();
+
+  //Serial.begin(115200);
+
   pinMode(PIN_Motor_A, OUTPUT);
   pinMode(PIN_Motor_B, OUTPUT);
-
-  Serial.begin(115200);
-
-  // Setup MIDI
-  //MIDI.begin(MIDI_CHANNEL_OMNI);
-  //MIDI.turnThruOff();
 }
 
 void loop()
@@ -132,8 +132,8 @@ void loop()
       if ((Status == 0xE0 && Channel == 8) ||
           (Status == 0xB0 && rx.byte2 == 7))
       {
-        // Move only if the requested value is distant from the current by 4 (to avoid a loopback)
-        if (abs(rx.byte3 - fader_value) > 4)
+        // Move only if the requested value is distant from the current by 2 (to avoid a loopback)
+        if (abs(rx.byte3 - fader_value) > 2)
           // Move to a 10 bit value
           MoveFader(rx.byte3 << 3);
       }
